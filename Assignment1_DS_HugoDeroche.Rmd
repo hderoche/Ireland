@@ -1,0 +1,549 @@
+---
+title: "Data Statistic Assignment"
+author: "Hugo Deroche"
+date: "3/22/2020"
+output: 
+  html_document:
+    code_folding: show
+---
+
+```{r setup, include=FALSE, echo=FALSE}
+rm(list=ls())
+library(graphics)
+knitr::opts_chunk$set(echo = TRUE)
+data.salaries = read.csv('salaries.csv')
+data.salaries
+```
+
+## Simple Linear Regression
+
+This is an R Markdown document. It will contain the R scripts of the Data Statistic assignment.
+
+### Question 1.a)
+
+Exploring the dataset
+
+```{r exploring the dataset}
+head(data.salaries)
+summary(data.salaries)
+str(data.salaries)
+```
+The first variable is the Years of experience (type = numeric)
+
+The second variable is the Salary of people depending on their experience (type = integer)
+
+
+_Plotting the data of 'salaries.csv'_
+
+I will plot the Salary against the Years of Experience, which seems like the most relevant plot to make because usually the salary depends on the experience.
+
+All the data will be displayed in euro/year
+
+```{r first plotting, echo=FALSE}
+Salary = data.salaries$Salary
+YearsOfExperience = data.salaries$YearsExperience
+plot(YearsOfExperience, Salary, main = "Scatterplot of Years Of Experience vs. Salary",
+     xlab = "Years of Experience",
+     ylab = "Salary")
+```
+
+Considering the plot, we can clearly see a linear trend, so a linear regression can be a good estimate for this set of variables.
+
+Also we can see that there seem to be no outliers, so no tuple need to be removed
+
+### Question 1.b)
+
+**Least squared method**
+
+In this section, I will determine the best fit function (slope and intercept) by calculing the S_xx, S_yy and S_xy
+In order to simplify, I will assign $x=YearsOfExperience$ to x and $y=Salary$ and $n=length(Salary)$
+$$S_{xy} = \sum(x * y) - \frac{\sum x * \sum y}{n}$$
+$$S_{yy} = \sum y^2 - \frac{ \sum y^2}{n}$$
+$$S_{xx} = \sum x^2 - \frac{ \sum x^2}{n}$$
+```{r Assigning the variables, include=FALSE, echo=FALSE}
+x <- YearsOfExperience
+y <- Salary
+n <- length(x)
+```
+
+```{r S_xx}
+S_xy <- sum(x * y) - (sum(x) * sum(y)) / n
+S_xx <- sum(x^2) - sum(x)^2 / n
+S_yy <- sum(y^2) - sum(y)^2 / n
+```
+```{r output of matrix, echo=FALSE}
+# arranging the data in a matrix
+S = matrix( c(S_xy, S_xx, S_yy),  nrow=1, ncol=3, byrow = TRUE) 
+dimnames(S) = list(c('Results'), c('S_xy', 'S_xx', 'S_yy'))
+S
+```
+
+Then the best fit slope is : $b=\frac{S_{xy}}{S_{xx}}$
+
+And the best fit intercept is : $a = mean(y) - b*mean(x)$
+```{r calculation a and b}
+b <- S_xy/S_xx
+a <- mean(y) - b*mean(x)
+```
+```{r output of best coeffs, echo=FALSE}
+# Arranging all the data in a matrix for better displaying
+BestFitCoeff = matrix( c(a, b),  nrow=1, ncol=2, byrow = TRUE) 
+dimnames(BestFitCoeff) = list(c('Results'), c('a (intercept)', 'b (slope)'))
+BestFitCoeff
+```
+$$\beta_0 = a = 25792.2$$
+
+$$\beta_1 = b = 9449.962$$
+
+
+```{r calculations for the regression model, echo=FALSE}
+aTxt = 'a = 25792.2'
+bTxt = 'b = 9449.962'
+
+{plot(x, y, main = "Scatterplot of Years Of Experience vs. Salary",
+     xlab = "Years of Experience",
+     ylab = "Salary", )
+  abline(a, b, col='red')
+  legend("bottomright", legend=c(aTxt, bTxt), title='Linear Regression : a + bx')}
+```
+
+**Interpretation : **
+
+Every year we can expect one person have a salary bonus of 10k. And a young employee with no experience would have a salary around 25k to start.
+
+### Question 1.c)
+
+By using the summary function on the lm function we will be able to determine if the hypothesis test is verified or not
+
+```{r linear model creation}
+model = lm(y ~ x, data = data.salaries)
+summary(model)
+```
+
+First of all, we can see that the estimate best fit slope and intercept are close to the one we found in the previous question
+
+Intercept = 25792.2 €
+
+Slope = 9450 €
+
+
+Our hypothesis are
+
+  - Ho hypothesis is that $\beta_0 = \beta_1$
+  - H1 : at least one of them is != 0
+  
+We hope to reject Ho
+
+Conclusion : p value < $\alpha$ = 0.05
+So we can reject Ho.
+
+
+### Question 1.d)
+
+In order to find the R^2 value, we will need to evaluate some intermediate results such as :
+Some of these results will be needed for later calculations.
+
+  - SST : Sum of squares of total
+  - SSE : Sum of squares of errors
+  - MSE : Mean of Square of Errors
+  - SE : Square-root of MSE
+
+Note : SSR : Sum of squares of regression : SRR = SST - SSE
+
+
+**R-Squared**
+
+```{r calculations for r squared}
+# In order to apply the formula of R-Squared we need to do some prior calculations
+SST = sum((y - mean(y))^2)
+y.hat = model$fitted.values # Getting the value from the model
+SSE <- sum((y - y.hat)^2) 
+SE <- sqrt(SSE / (n-2))
+r2 = 1 - SSE/SST
+```
+```{r rsquared and model summary, echo=FALSE}
+r2
+summary(model)
+```
+
+Given the values of Pr(>|t|) which are smaller than $\alpha$, we can affirm that the model we found is a sufficiant model given the level of significance : 0.05.
+  
+**Note :**
+
+The calulated value of R^2 is very close to the value that the lm() model gives us.
+
+R^2 is very close to 1 (~ 0.957) so 95% of the salary's variation is explained by the Years of Experience
+
+
+**A Linear Model is a good estimate for this dataset.**
+```{r correlation}
+cor(data.salaries)
+```
+Moreover the correlation between these two variables is very close to 1, so these two parameters are linked in some way.
+
+
+
+### Question 1.e)
+
+The new employee has 6.5 years of experience and wants to know what he should expect.
+
+In order to calculate the prediction point, we have to use the linear regression we have found and use $a + b*6.5$
+
+**Point prediction**
+```{r point prediction}
+{plot(x, y, main = "Scatterplot of Years Of Experience vs. Salary",
+     xlab = "Years of Experience",
+     ylab = "Salary", )
+  segments(0,a + b*6.5, 6.5, a + b*6.5)
+  segments(6.5,0,6.5,a + b*6.5)
+  abline(a, b, col='red')
+  legend("bottomright", legend=c(aTxt, bTxt), title='Linear Regression : a + bx')}
+newEmployee.salary = a + b*6.5
+```
+```{r output, echo=FALSE}
+cat('The prediction point for a new employee of 6.5 years of experience is : ',newEmployee.salary,'€')
+```
+
+A new employee with 6.5 years of experience would expect to have a salary of $87216.96$ (prediction point)
+
+**95% confidence Interval**
+
+$$\bar{X} \pm \delta = \bar{X} \pm Z\frac{s}{\sqrt{n}}$$
+X.bar = Mean
+Z = Value for 95% interval : 1.96
+s = Standard deviation
+n = Number of observations
+
+
+```{r confidence}
+
+# Using the student table, with 97.5% in the two-sided column in order to have a 5% around the best fit line
+t28 <- qt(0.975,df=n-2)
+
+MSE <- SSE / (n-2)
+x.bar=mean(x)
+confidence6.5= t28 * sqrt(MSE*( (1/n) + (6.5 - x.bar )^2/ sum( (x-x.bar)^2 ) ))
+
+Conf = matrix( c(a + b*6.5, a + b*6.5 - confidence6.5, a + b*6.5 + confidence6.5),  nrow=1, ncol=3, byrow = TRUE) 
+dimnames(Conf) = list(c('Confidence results for 6.5 YoE'), c('Fit', 'Lower', 'Upper'))
+Conf
+# Verification using the built-in function
+
+conf6.5 <- predict(model, newdata = data.frame(x = 6.5), interval = 'confidence')
+conf6.5
+
+# Generating the result for all the points in the data frame
+confidence <- predict(model, data.frame(data.salaries$Salary), interval = 'confidence')
+
+library(ggplot2)
+ggplot(data.salaries, aes(x=YearsOfExperience, y=Salary)) + 
+  geom_point(color='#2980B9', size = 4) + 
+  geom_smooth(method=lm, color='#2C3E50')
+```
+
+We can see of the plot above that the confidence intervall is narrower at the mean and wider at the ends.
+
+
+**95% prediction Interval**
+
+The Prediction Interval is a range of values where the prediction point is 95% likely to be in this range.
+
+It consists in drawing two parallels and keeping a chanel with 5% above and below the best fit line.
+
+
+```{r prediction}
+
+# By using the Student's t-distribution we find t30-2 : t28 : 2.048 (two-sided)
+prediction6.5= t28 * sqrt(MSE*( 1 + (1/n) + (6.5 - x.bar )^2/ sum( (x-x.bar)^2 ) ))
+
+Pred = matrix( c(a + b*6.5, a + b*6.5 - prediction6.5, a + b*6.5 + prediction6.5),  nrow=1, ncol=3, byrow = TRUE) 
+dimnames(Pred) = list(c('Prediction results for 6.5 YoE'), c('Fit', 'Lowerr', 'Upper'))
+Pred
+
+# verification using the built-in function 
+pred6.5 <- predict(model, newdata = data.frame(x = 6.5), interval = 'prediction')
+pred6.5
+# Generating all the prediction points from all the data
+prediction <- predict(model,data.frame(YearsOfExperience), interval = 'prediction')
+
+ggplot(data.salaries, aes(x=YearsOfExperience, y=Salary))+
+    geom_point() +
+    geom_line(aes(y=prediction[,2]), color = "blue", linetype = "dashed")+
+    geom_line(aes(y=prediction[,3]), color = "blue", linetype = "dashed")
+```
+
+The higher and lower prediction lines represents a channel, for which all the predicted value can be located, with a 95% confidance rate.
+
+
+### Question 1.f)
+
+We can't use the model because we can not extrapolate the data as it may be not relevant and the model is linear for the first 10 years of experience but it may be logaritmic for the next decade. 
+If we were to keep this model this person would have a salary of :
+```{r prediction using the model for 30+xp}
+salary.thirty <- a + b * 30
+salary.thirty
+```
+
+The prediction point for a 30-year experience is $309291.1$
+
+Maybe the curve is logarithmic after the 10 years of experience, as it might cap at some point.
+
+
+To solve the problem we would need to have more data from the company with people who have more experience.
+It would be even better if we had some data of people with 30+ years of experience, so that we can interpolate and predict the salary correctly
+
+
+### Question 1.g)
+
+```{r final plot of the data} 
+# Plotting the final results 
+{plot(x, y, main = "Scatterplot of Years Of Experience vs. Salary",
+     xlab = "Years of Experience",
+     ylab = "Salary", )
+  segments(0,a + b*6.5, 6.5, a + b*6.5)
+  segments(6.5,0,6.5,a + b*6.5)
+  abline(model, col='red')
+  lines(x, prediction[,2], col="blue", lty=2)
+  lines(x, prediction[,3], col="blue", lty=2)
+  lines(x, confidence[,2], col="orange", lty=2)
+  lines(x, confidence[,3], col="orange", lty=2)
+  legend("bottomright", legend=c('Best Fit line', 'Prediction', 'Confidence'), col=c('red', 'blue', 'orange'), title='Legend')
+  }
+```
+
+
+
+
+## Question 2)
+
+```{r Q2_setup, include=FALSE}
+rm(list=ls())
+knitr::opts_chunk$set(echo = TRUE)
+medical = read.csv('medical-expenses.csv')
+```
+
+### Introduction
+
+We are asked by an insurance company to extract from this dataset a model in order to predict the expense given the profile of the person.
+We are given 6 variables and we have to rearrange, clear, and use the data to have a relevant model to give to the insurance company.
+
+The variable to predict is **expense**
+
+We will choose arbitrarily to train our data on 70% of the data and to test it on the 30% remaining.
+
+The steps that I will go throught will be :
+
+  - Exploring the dataset
+  - Building a model
+  - Testing the model
+  - Add some interractions
+  - Test prediction
+
+
+### Exploring the dataset
+
+I need to explore the dataset in order to know which variable this dataset have.
+
+```{r exploring}
+# Looking at the data
+head(medical)
+summary(medical)
+str(medical)
+```
+We can notice that we have some categorical variables, so we will have to make dummy variables by using the factor function
+
+The sex, smoker, and region are categorical variables
+
+```{r categorical variable}
+# Factorising the data
+medical$sex = factor(medical$sex)
+medical$smoker = factor(medical$smoker)
+medical$region = factor(medical$region)
+str(medical)
+```
+
+
+Let's take a look at their correlation by plotting the dataset and by calling the correlation function :
+```{r plotting and correlation}
+plot(medical)
+```
+
+### Building the model
+
+Now that we converted the categorical variables by factors and dummy variables, we can build a model 
+$$y = \beta_{0} + x_{1}\beta_{1} + x_{2}\beta_{2} ... + x_{n}\beta_{n}$$
+```{r building model}
+cor(medical$expenses, medical$age)
+# First Model
+set.seed(1799)
+n <- nrow(medical)
+index <- sample(1:n, floor(n * 0.7))
+length(index)
+
+train <- medical[index, ]
+test <- medical[-index, ]
+
+model <- lm(expenses ~ .,data = train)
+summary(model)
+AIC(model)
+```
+
+The Pr(>|t|) value can indicate which parameter is relevant or not, we will use the same significance level as the previous exercice which is $\alpha = 0.05$
+
+So, for this significance level the sex variable is not relevant. However we can't remove the region variable because only one of the factor has a Pr-value above the significance level.
+
+We will now try to improve the model by removing the sex variable, and try most of the combination of variable to have the lowest AIC.
+The lower the AIC, the better the model is.
+
+```{r improving model}
+# Improving the model
+model1 = lm(expenses ~ age + bmi + region + children + smoker, data = train)
+AIC(model1) # better AIC than with the sex variable
+```
+The model without the sex variable has a lower AIC so it is fondamentaly better, even though the AIC only reduced by ~1
+
+Now, let's proceed to a backward selection to remove the unnecessary data to the model
+We will remove 1 by 1 the variable and test the AIC to each of them
+We will choose the model that has the lowest AIC
+
+```{r backward selection}
+# Eventually testing for better models
+model2 = lm(expenses ~ bmi + region + children + smoker, data = train) # without age
+model3 = lm(expenses ~ age + region + children + smoker, data = train) # without bmi
+model4 = lm(expenses ~ age + bmi + children +  smoker, data = train)  # without region
+model5 = lm(expenses ~ age + bmi + region + smoker, data = train) # without children
+model6 = lm(expenses ~ age + bmi + region + children , data = train) # without smoker
+```
+```{r displaying results, echo=FALSE}
+aic <- c(AIC(model1),AIC(model2))
+aic <- c(aic,AIC(model3))
+aic <- c(aic,AIC(model4))
+aic <- c(aic,AIC(model5))
+aic <- c(aic,AIC(model6))
+Aic = matrix( c(aic),  nrow=1, ncol=6, byrow = TRUE) 
+dimnames(Aic) = list(c('AIC Results :'), c('Model 1 : ref', 'Model 2', 'Model 3', 'Model 4', 'Model 5', 'Model 6'))
+```
+```{r}
+Aic
+```
+
+Given the result, we can not remove any variable as the AIC gets higher as we remove parameters.
+So the best model we have found is the one without the sex variable.
+
+Model1 is the best model.
+```{r final model}
+summary(model1)
+```
+
+We can now extract all the data from this model and test it on our test data.
+
+### Testing the model
+```{r test model1}
+deviance(model1)
+anova(model1, test = "Chisq")
+```
+
+The ANOVA Model returns a value of the same magnitude as the deviance (residuals) : 3.3e+10
+The hypothesis of the model :
+  - Ho : deviance close to the Chi-squared -> Good model
+  - H1 : no relation between the deviance and the Chi-squared value
+
+Moreover the Pr(>F) (Fisher Test) value show that all the data is below the significance level of $\alpha = 0.05$
+We fail to reject Ho so we can say that the model is good enough.
+
+
+```{r accuracy}
+coeffs <- model1$coefficients
+
+predicted.data <- predict(model1, newdata = test)
+real.data <- test$expenses
+diff.data <- abs(predicted.data - real.data)
+
+{plot(real.data, ylab = 'Data', col='blue')
+points(predicted.data, col='red', pch=16)
+legend('topleft', legend = c('Real Data', 'Predicted data'), col=c('blue', 'red'), bty = n, pch=c(1,16))}
+```
+This plot shows the repartition of the point given their index, the reference repartition is in blue and the predicted one is in red.
+The closer the red dots are from the blue one, the better.
+```{r}
+# Plotting the predicted values against the real data
+
+mod.nointerraction <- lm(predicted.data ~ real.data)
+{plot(real.data, predicted.data, xlab = 'Real data from test', ylab = 'Predicted data', title('Without interraction'))
+  abline(a = mod.nointerraction$coefficients[1], b = mod.nointerraction$coefficients[2], col='red')
+  legend('topleft', legend = c('R-Squared : ', round(summary(mod.nointerraction)$r.squared, 2)))}
+
+```
+```{r echo=FALSE}
+cat('accuracy : ', round(summary(mod.nointerraction)$r.squared, 2)*100, ' %')
+```
+
+### Interractions
+
+Now, let's add the interraction to the model
+
+In order to add interraction between two or more variables, we have to ask ourselves two questions :
+
+  - Does the interraction make sense conceptually ?
+  - Is the interraction term statistically significant ?
+
+If the answer is yes for both then we can add the interraction term in the model.
+
+For the bmi and smoker variables they seem to be interracting between each other, a smoking person might have a worst physical condition
+ age and bmi
+```{r interraction}
+str(medical)
+model.interraction <- lm(expenses ~ age + region + children + smoker + smoker:bmi, data = train)
+AIC(model.interraction)
+summary(model.interraction)
+```
+The bmi variable by itself is not significant, but when it interract with the smoker variable it is.
+
+```{r accuracy.Interraction}
+coeffs <- model.interraction$coefficients
+
+# Prediction the data on the test sample from the model with interactions
+predicted.data.iter <- predict(model.interraction, newdata = test)
+
+# Calculation of the difference between the predicted data and the real data
+diff.data.iter <- abs(predicted.data.iter - real.data)
+
+# Ploting the data by index, the difference in prediction is the vertical distance of a blue and a green point on the same index
+{plot(real.data, ylab = 'Data', col='blue')
+points(predicted.data.iter, col='green', pch=16)
+legend('topleft', legend = c('Real Data', 'Predicted data'), col=c('blue', 'green'), bty = n, pch=c(1,16))}
+
+# Plotting the predicted values against the real data
+mod <- lm(predicted.data.iter ~ real.data)
+{plot(real.data, predicted.data.iter, xlab = 'Real data', ylab = 'Predicted data', title('With Interraction'))
+  abline(mod$coefficients[1], mod$coefficients[2], col='green')
+  legend('topleft', legend = c('R-Squared : ',round(summary(mod)$r.squared, 2)))}
+```
+```{r echo=FALSE}
+cat('accuracy : ', round(summary(mod)$r.squared, 2)*100, ' %')
+```
+
+
+We can see that the model with interactions has a better accuracy and feels more consistent as we might think of some links between variables.
+
+
+### Final Test Prediction
+
+The objective is to  predict the expected medical expenses for a new customer: a male aged 30 with 2 children, who is a smoker with a BMI of 32, and who lives in the southeast of Ireland.
+
+The fact that he is a male doesn't affect the model as the sex parameter was not statistically significant.
+
+```{r prediction of the new customer}
+# Prediction of the new customer
+prediction.custom <- function(age, regionNW, regionSE, regionSW, children, smoker, bmi){
+  result <- age*coeffs[2] + regionNW*coeffs[3] + regionNW*coeffs[4] + regionNW*coeffs[5] + children*coeffs[6] + smoker*coeffs[7] + (1-smoker)*bmi*coeffs[8] + smoker*bmi*coeffs[9] + coeffs[1]
+  return(result)
+}
+
+result <- prediction.custom(30, 0, 1, 0, 2, 1, 32 )
+result
+```
+
+**According to the model the new customer would have to pay : $32749 €$**
+
+*Hugo Deroche*
