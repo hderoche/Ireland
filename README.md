@@ -1,7 +1,7 @@
 # Ireland
 All the code I made during my semester in Ireland
 
-DataStatistics
+DataStatistics \n
 Numerical Probabilities
 AI&DataSciences
 Databases
